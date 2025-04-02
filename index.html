@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyper Power AI Chat</title>
+    <style>
+        :root {
+            --primary-color: #0066ff;
+            --secondary-color: #00ccff;
+            --error-color: #ff4d4f;
+            --warning-color: #faad14;
+            --text-color: #e6e6e6;
+            --bg-color: #1a1a1a;
+            --chat-bg: #262626;
+            --user-message-bg: #0066ff;
+            --bot-message-bg: #333333;
+            --input-bg: #333333;
+            --border-color: #404040;
+        }
+
+        body {
+            font-family: 'Inter', 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: var(--chat-bg);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .message {
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+
+        .user-message {
+            background-color: var(--user-message-bg);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+            color: white;
+        }
+
+        .bot-message {
+            background-color: var(--bot-message-bg);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .file-message {
+            font-size: 0.9em;
+            color: #aaa;
+            padding: 8px 12px;
+            background-color: #333;
+            border-radius: 6px;
+            margin: 5px 0;
+            border: 1px dashed var(--border-color);
+        }
+
+        .code-block {
+            background-color: #1e1e1e;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.85em;
+            margin: 8px 0;
+            border: 1px solid #404040;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            font-size: 15px;
+            resize: none;
+            min-height: 50px;
+            max-height: 150px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+
+        .btn:hover {
+            background-color: #0052cc;
+            transform: scale(1.05);
+        }
+
+        .btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        #file-preview {
+            position: absolute;
+            bottom: 80px;
+            right: 30px;
+            background-color: var(--chat-bg);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: none;
+            z-index: 100;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #status-bar {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .status-icon {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .connected {
+            color: var(--secondary-color);
+        }
+
+        .connecting {
+            color: var(--warning-color);
+        }
+
+        .error {
+            color: var(--error-color);
+        }
+
+        .loading-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-color);
+        }
+
+        .welcome-message h2 {
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .features {
+            text-align: left;
+            margin-top: 20px;
+            background-color: #333;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .features ul {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        .features li {
+            margin-bottom: 8px;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        /* Link styling */
+        a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                height: 100vh;
+            }
+            
+            #chat-window {
+                padding: 10px;
+            }
+            
+            .message {
+                max-width: 90%;
+                font-size: 14px;
+                padding: 10px 14px;
+            }
+            
+            #file-preview {
+                max-width: 250px;
+                right: 15px;
+                bottom: 70px;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <select id="language">
+                <option value="en">English</option>
+                <option value="si">සිංහල (Sinhala)</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="fr">Français (French)</option>
+                <option value="es">Español (Spanish)</option>
+                <option value="de">Deutsch (German)</option>
+                <option value="ja">日本語 (Japanese)</option>
+                <option value="zh">中文 (Chinese)</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+                <option value="ar">العربية (Arabic)</option>
+                <option value="ru">Русский (Russian)</option>
+            </select>
+            
+            <div class="api-status">
+                <div class="status-icon"></div>
+                <div class="status-text">Connecting...</div>
+            </div>
+        </div>
+
+        <div id="chat-window"></div>
+
+        <div id="file-preview"></div>
+
+        <div class="input-area">
+            <input type="file" id="file-input" multiple>
+            <button id="upload-btn" class="btn" title="Upload files">📎</button>
+            <textarea id="user-input" placeholder="Type your message here..."></textarea>
+            <button id="send-btn" class="btn">➤</button>
+        </div>
+
+        <div id="status-bar"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const chatWindow = document.getElementById('chat-window');
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const languageSelector = document.getElementById('language');
+            const fileInput = document.getElementById('file-input');
+            const uploadBtn = document.getElementById('upload-btn');
+            const filePreview = document.getElementById('file-preview');
+            const apiStatus = document.querySelector('.api-status');
+            
+            // State
+            let uploadedFiles = [];
+            let conversationHistory = [];
+            let isApiConnected = false;
+            
+            // API Configuration
+            const GEMINI_API_KEY = 'AIzaSyAdC7CBm8QaqG3OuUZ2Q3NiLD7Fn_5x5I4';
+            const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+            
+            // Initialize
+            checkApiConnection();
+            setupEventListeners();
+            displayWelcomeMessage();
+            
+            // Functions
+            function setupEventListeners() {
+                sendBtn.addEventListener('click', sendMessage);
+                userInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+                
+                uploadBtn.addEventListener('click', function() {
+                    fileInput.click();
+                });
+                
+                fileInput.addEventListener('change', handleFileUpload);
+                
+                uploadBtn.addEventListener('mouseenter', showFilePreview);
+                uploadBtn.addEventListener('mouseleave', hideFilePreview);
+            }
+            
+            async function checkApiConnection() {
+                updateStatus('Connecting to AI service...', 'connecting');
+                
+                try {
+                    const testResponse = await fetch(GEMINI_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: "Test connection" }]
+                            }]
+                        })
+                    });
+                    
+                    if (testResponse.ok) {
+                        updateStatus('Connected to AI service', 'connected');
+                        isApiConnected = true;
+                    } else {
+                        const errorData = await testResponse.json();
+                        throw new Error(errorData.error?.message || 'API connection failed');
+                    }
+                } catch (error) {
+                    console.error('API Connection Error:', error);
+                    updateStatus('Connection failed: ' + error.message, 'error');
+                    isApiConnected = false;
+                }
+            }
+            
+            async function sendMessage() {
+                if (!isApiConnected) {
+                    addMessageToChat('bot', getErrorMessage(languageSelector.value, 'API_NOT_CONNECTED'));
+                    checkApiConnection();
+                    return;
+                }
+                
+                const message = userInput.value.trim();
+                if (!message && uploadedFiles.length === 0) return;
+                
+                const selectedLanguage = languageSelector.value;
+                
+                // Add user message to chat
+                if (message) {
+                    addMessageToChat('user', message);
+                    conversationHistory.push({ role: 'user', content: message });
+                }
+                
+                // Add file upload notification if files were uploaded
+                if (uploadedFiles.length > 0) {
+                    const fileNames = uploadedFiles.map(f => f.name).join(', ');
+                    const fileMessage = `${message ? 'Also ' : ''}Uploaded files: ${fileNames}`;
+                    addMessageToChat('user', fileMessage, true);
+                    conversationHistory.push({ role: 'user', content: fileMessage });
+                }
+                
+                userInput.value = '';
+                
+                // Show loading indicator
+                const loadingMessage = addMessageToChat('bot', getLoadingMessage(selectedLanguage), true);
+                addLoadingDots(loadingMessage);
+                
+                try {
+                    // Prepare the request
+                    const requestData = {
+                        contents: [{
+                            parts: [{
+                                text: buildPrompt(message, selectedLanguage)
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            topP: 0.9,
+                            topK: 40,
+                            maxOutputTokens: 2048
+                        }
+                    };
+                    
+                    // Add file contents to the request if available
+                    if (uploadedFiles.length > 0) {
+                        for (const file of uploadedFiles) {
+                            const fileContent = await readFileContent(file);
+                            requestData.contents[0].parts.push({
+                                text: `File: ${file.name}\nContent:\n${fileContent}`
+                            });
+                        }
+                    }
+                    
+                    // Send request to Gemini API
+                    const response = await fetch(GEMINI_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || 'API request failed');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Remove loading indicator
+                    removeLoadingDots(loadingMessage);
+                    
+                    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+                        const responseText = data.candidates[0].content.parts[0].text;
+                        processAIResponse(responseText, selectedLanguage);
+                        conversationHistory.push({ role: 'bot', content: responseText });
+                    } else {
+                        throw new Error('API returned unexpected response structure');
+                    }
+                    
+                    // Clear files after successful processing
+                    uploadedFiles = [];
+                    fileInput.value = '';
+                    updateFilePreview();
+                    
+                } catch (error) {
+                    console.error('API Error:', error);
+                    removeLoadingDots(loadingMessage);
+                    addMessageToChat('bot', getErrorMessage(selectedLanguage, error));
+                    updateStatus('Error: ' + error.message, 'error');
+                }
+            }
+            
+            function buildPrompt(message, language) {
+                const languageInstruction = {
+                    'en': 'Respond in English.',
+                    'si': 'Respond in Sinhala (සිංහල).',
+                    'ta': 'Respond in Tamil (தமிழ்).',
+                    'fr': 'Respond in French (Français).',
+                    'es': 'Respond in Spanish (Español).',
+                    'de': 'Respond in German (Deutsch).',
+                    'ja': 'Respond in Japanese (日本語).',
+                    'zh': 'Respond in Chinese (中文).',
+                    'hi': 'Respond in Hindi (हिन्दी).',
+                    'ar': 'Respond in Arabic (العربية).',
+                    'ru': 'Respond in Russian (Русский).'
+                }[language] || 'Respond in English.';
+                
+                let prompt = `${languageInstruction}\n\n`;
+                
+                if (message) {
+                    prompt += `User message: ${message}\n\n`;
+                }
+                
+                if (uploadedFiles.length > 0) {
+                    prompt += `The user has uploaded ${uploadedFiles.length} file(s). `;
+                    prompt += `Please analyze the content and provide a detailed response.\n\n`;
+                }
+                
+                // Include conversation history for context
+                if (conversationHistory.length > 0) {
+                    prompt += `Conversation context:\n`;
+                    conversationHistory.forEach(msg => {
+                        prompt += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+                    });
+                    prompt += `\n`;
+                }
+                
+                prompt += `Guidelines:
+                - Format code blocks with triple backticks
+                - Provide clear explanations
+                - Be concise but thorough
+                - Include examples when helpful`;
+                
+                return prompt;
+            }
+            
+            function processAIResponse(responseText, language) {
+                // Process code blocks if present
+                const codeBlockRegex = /```(?:[a-zA-Z]+)?\n([\s\S]*?)\n```/g;
+                let match;
+                let lastIndex = 0;
+                let hasCode = false;
+                
+                // Create a container for the response
+                const responseContainer = document.createElement('div');
+                responseContainer.classList.add('bot-message', language);
+                
+                while ((match = codeBlockRegex.exec(responseText)) !== null) {
+                    hasCode = true;
+                    
+                    // Add text before code block
+                    if (match.index > lastIndex) {
+                        const textBefore = responseText.substring(lastIndex, match.index);
+                        responseContainer.innerHTML += formatMessageText(textBefore);
+                    }
+                    
+                    // Create code block
+                    const codeBlock = document.createElement('pre');
+                    codeBlock.textContent = match[1];
+                    codeBlock.classList.add('code-block');
+                    responseContainer.appendChild(codeBlock);
+                    
+                    lastIndex = codeBlockRegex.lastIndex;
+                }
+                
+                // Add remaining text after last code block
+                if (lastIndex < responseText.length) {
+                    const remainingText = responseText.substring(lastIndex);
+                    responseContainer.innerHTML += formatMessageText(remainingText);
+                }
+                
+                // Replace the loading message with the actual response
+                const loadingMessage = chatWindow.querySelector('.loading-message');
+                if (loadingMessage) {
+                    chatWindow.replaceChild(responseContainer, loadingMessage);
+                } else {
+                    chatWindow.appendChild(responseContainer);
+                }
+                
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }
+            
+            function addMessageToChat(sender, message, isSystem = false) {
+                const messageDiv = document.createElement('div');
+                
+                if (isSystem) {
+                    messageDiv.classList.add('file-message');
+                } else {
+                    messageDiv.classList.add('message', `${sender}-message`);
+                    if (sender === 'bot') {
+                        messageDiv.classList.add(languageSelector.value);
+                    }
+                }
+                
+                if (sender === 'bot' && message.includes('...')) {
+                    messageDiv.classList.add('loading-message');
+                }
+                
+                messageDiv.innerHTML = formatMessageText(message);
+                chatWindow.appendChild(messageDiv);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                
+                return messageDiv;
+            }
+            
+            function formatMessageText(text) {
+                // Convert URLs to links
+                text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+                
+                // Convert line breaks to <br>
+                text = text.replace(/\n/g, '<br>');
+                
+                return text;
+            }
+            
+            async function handleFileUpload(event) {
+                const validTypes = [
+                    'text/plain',
+                    'application/json',
+                    'application/pdf',
+                    'text/csv',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                ];
+                
+                const files = Array.from(event.target.files).filter(file => 
+                    validTypes.includes(file.type) || 
+                    file.name.endsWith('.txt') || 
+                    file.name.endsWith('.json') ||
+                    file.name.endsWith('.pdf') ||
+                    file.name.endsWith('.csv') ||
+                    file.name.endsWith('.docx')
+                );
+                
+                if (files.length !== event.target.files.length) {
+                    addMessageToChat('bot', 'Some files were rejected. Supported formats: txt, json, pdf, csv, docx');
+                }
+                
+                uploadedFiles = files;
+                updateFilePreview();
+            }
+            
+            function updateFilePreview() {
+                if (uploadedFiles.length === 0) {
+                    filePreview.style.display = 'none';
+                    return;
+                }
+                
+                filePreview.innerHTML = '<strong>Files to upload:</strong><br>' + 
+                    uploadedFiles.map(f => `• ${f.name} (${formatFileSize(f.size)})`).join('<br>');
+                filePreview.style.display = 'block';
+            }
+            
+            function showFilePreview() {
+                if (uploadedFiles.length > 0) {
+                    filePreview.style.display = 'block';
+                }
+            }
+            
+            function hideFilePreview() {
+                filePreview.style.display = 'none';
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            function readFileContent(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    
+                    reader.onload = (event) => {
+                        resolve(event.target.result);
+                    };
+                    
+                    reader.onerror = (error) => {
+                        reject(error);
+                    };
+                    
+                    if (file.type.startsWith('text/') || file.type === 'application/json') {
+                        reader.readAsText(file);
+                    } else {
+                        // For binary files, read as data URL
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+            
+            function updateStatus(message, status) {
+                apiStatus.className = 'api-status';
+                apiStatus.classList.add(status);
+                
+                const statusText = apiStatus.querySelector('.status-text');
+                if (statusText) {
+                    statusText.textContent = message;
+                }
+                
+                const statusIcon = apiStatus.querySelector('.status-icon');
+                if (statusIcon) {
+                    statusIcon.style.backgroundColor = {
+                        'connecting': 'var(--warning-color)',
+                        'connected': 'var(--secondary-color)',
+                        'error': 'var(--error-color)'
+                    }[status];
+                }
+            }
+            
+            function addLoadingDots(messageElement) {
+                const dotsContainer = document.createElement('span');
+                dotsContainer.className = 'loading-dots';
+                dotsContainer.innerHTML = '<span></span><span></span><span></span>';
+                messageElement.appendChild(dotsContainer);
+            }
+            
+            function removeLoadingDots(messageElement) {
+                const dots = messageElement.querySelector('.loading-dots');
+                if (dots) {
+                    dots.remove();
+                }
+            }
+            
+            function displayWelcomeMessage() {
+                const welcomeDiv = document.createElement('div');
+                welcomeDiv.className = 'welcome-message';
+                welcomeDiv.innerHTML = `
+                    <h2>Welcome to Hyper Power AI</h2>
+                    <p>Ask me anything or upload files for analysis. I support multiple languages!</p>
+                    <div class="features">
+                        <p><strong>Features:</strong></p>
+                        <ul>
+                            <li>Multilingual support (12 languages)</li>
+                            <li>File upload and analysis (text, PDF, JSON, CSV, DOCX)</li>
+                            <li>Code generation and explanation</li>
+                            <li>Conversation history context</li>
+                            <li>Real-time responses with Gemini 2.0 Flash</li>
+                        </ul>
+                    </div>
+                `;
+                chatWindow.innerHTML = '';
+                chatWindow.appendChild(welcomeDiv);
+            }
+            
+            function getLoadingMessage(language) {
+                return {
+                    'en': 'Processing your request...',
+                    'si': 'ඔබගේ ඉල්ලීම සැකසෙමින් පවතී...',
+                    'ta': 'உங்கள் கோரிக்கையை செயலாக்குகிறது...',
+                    'fr': 'Traitement de votre demande...',
+                    'es': 'Procesando su solicitud...',
+                    'de': 'Ihre Anfrage wird bearbeitet...',
+                    'ja': 'リクエストを処理中...',
+                    'zh': '正在处理您的请求...',
+                    'hi': 'आपका अनुरोध प्रसंस्करण किया जा रहा है...',
+                    'ar': 'جاري معالجة طلبك...',
+                    'ru': 'Обработка вашего запроса...'
+                }[language] || 'Processing your request...';
+            }
+            
+            function getErrorMessage(language, error) {
+                const errorType = typeof error === 'string' ? error : 
+                                (error && error.message) ? 
+                                    (error.message.includes('API key') ? 'API_KEY_ERROR' :
+                                    error.message.includes('400') ? 'BAD_REQUEST' :
+                                    'DEFAULT') :
+                                'DEFAULT';
+                
+                const errorMessages = {
+                    'en': {
+                        'API_NOT_CONNECTED': 'AI service is not connected. Please try again later.',
+                        'API_KEY_ERROR': 'Invalid API configuration. Please check your settings.',
+                        'BAD_REQUEST': 'Invalid request format. Please try again.',
+                        'DEFAULT': 'An error occurred while processing your request.'
+                    },
+                    'si': {
+                        'API_NOT_CONNECTED': 'AI සේවාව සම්බන්ධ වී නැත. කරුණාකර පසුව නැවත උත්සාහ කරන්න.',
+                        'API_KEY_ERROR': 'වලංගු නොවන API වින්‍යාසය. කරුණාකර ඔබගේ සැකසුම් පරීක්ෂා කරන්න.',
+                        'BAD_REQUEST': 'වලංගු නොවන ඉල්ලීම් ආකෘතිය. කරුණාකර නැවත උත්සාහ කරන්න.',
+                        'DEFAULT': 'ඔබගේ ඉල්ලීම සැකසීමේදී දෝෂයක් ඇතිවිය.'
+                    },
+                    'ta': {
+                        'API_NOT_CONNECTED': 'AI சேவை இணைக்கப்படவில்லை. பின்னர் மீண்டும் முயற்சிக்கவும்.',
+                        'API_KEY_ERROR': 'தவறான API உள்ளமைவு. உங்கள் அமைப்புகளைச் சரிபார்க்கவும்.',
+                        'BAD_REQUEST': 'தவறான கோரிக்கை வடிவம். மீண்டும் முயற்சிக்கவும்.',
+                        'DEFAULT': 'உங்கள் கோரிக்கையை செயல்படுத்தும்போது பிழை ஏற்பட்டது.'
+                    },
+                    'fr': {
+                        'API_NOT_CONNECTED': 'Le service IA n\'est pas connecté. Veuillez réessayer plus tard.',
+                        'API_KEY_ERROR': 'Configuration API invalide. Veuillez vérifier vos paramètres.',
+                        'BAD_REQUEST': 'Format de requête invalide. Veuillez réessayer.',
+                        'DEFAULT': 'Une erreur s\'est produite lors du traitement de votre demande.'
+                    },
+                    'es': {
+                        'API_NOT_CONNECTED': 'El servicio de IA no está conectado. Por favor, inténtelo de nuevo más tarde.',
+                        'API_KEY_ERROR': 'Configuración de API no válida. Por favor, verifique su configuración.',
+                        'BAD_REQUEST': 'Formato de solicitud no válido. Por favor, inténtelo de nuevo.',
+                        'DEFAULT': 'Se produjo un error al procesar su solicitud.'
+                    },
+                    'de': {
+                        'API_NOT_CONNECTED': 'Der KI-Dienst ist nicht verbunden. Bitte versuchen Sie es später noch einmal.',
+                        'API_KEY_ERROR': 'Ungültige API-Konfiguration. Bitte überprüfen Sie Ihre Einstellungen.',
+                        'BAD_REQUEST': 'Ungültiges Anfrageformat. Bitte versuchen Sie es erneut.',
+                        'DEFAULT': 'Bei der Verarbeitung Ihrer Anfrage ist ein Fehler aufgetreten.'
+                    },
+                    'ja': {
+                        'API_NOT_CONNECTED': 'AIサービスが接続されていません。後ほど再試行してください。',
+                        'API_KEY_ERROR': '無効なAPI構成です。設定を確認してください。',
+                        'BAD_REQUEST': '無効なリクエスト形式です。もう一度お試しください。',
+                        'DEFAULT': 'リクエストの処理中にエラーが発生しました。'
+                    },
+                    'zh': {
+                        'API_NOT_CONNECTED': 'AI服务未连接。请稍后再试。',
+                        'API_KEY_ERROR': 'API配置无效。请检查您的设置。',
+                        'BAD_REQUEST': '请求格式无效。请重试。',
+                        'DEFAULT': '处理您的请求时出错。'
+                    },
+                    'hi': {
+                        'API_NOT_CONNECTED': 'AI सेवा कनेक्ट नहीं है। कृपया बाद में पुनः प्रयास करें।',
+                        'API_KEY_ERROR': 'अमान्य API विन्यास। कृपया अपनी सेटिंग्स जांचें।',
+                        'BAD_REQUEST': 'अमान्य अनुरोध प्रारूप। कृपया पुनः प्रयास करें।',
+                        'DEFAULT': 'आपके अनुरोध को संसाधित करते समय एक त्रुटि हुई।'
+                    },
+                    'ar': {
+                        'API_NOT_CONNECTED': 'خدمة الذكاء الاصطناعي غير متصلة. يرجى المحاولة مرة أخرى لاحقًا۔',
+                        'API_KEY_ERROR': 'تكوين API غير صالح. يرجى التحقق من إعداداتك.',
+                        'BAD_REQUEST': 'تنسيق طلب غير صالح. يرجى المحاولة مرة أخرى.',
+                        'DEFAULT': 'حدث خطأ أثناء معالجة طلبك.'
+                    },
+                    'ru': {
+                        'API_NOT_CONNECTED': 'Сервис ИИ не подключен. Пожалуйста, попробуйте позже.',
+                        'API_KEY_ERROR': 'Неверная конфигурация API. Пожалуйста, проверьте настройки.',
+                        'BAD_REQUEST': 'Неверный формат запроса. Пожалуйста, попробуйте еще раз.',
+                        'DEFAULT': 'При обработке вашего запроса произошла ошибка.'
+                    }
+                };
+                
+                return errorMessages[language]?.[errorType] || errorMessages['en'][errorType];
+            }
+        });
+    </script>
+</body>
+</html>
